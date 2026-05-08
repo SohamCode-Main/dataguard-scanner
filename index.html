@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataGuard Auditor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex flex-col items-center py-12 min-h-screen">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md mb-8">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">DataGuard Auditor</h1>
+        <p class="text-gray-500 mb-6 text-sm">Automated GDPR Compliance Scanner</p>
+
+        <input type="text" id="urlInput" placeholder="e.g., apple.com" 
+            class="w-full border border-gray-300 rounded-lg p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        
+        <button onclick="startScan()" 
+            class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">
+            Scan Website
+        </button>
+
+        <div id="resultsBox" class="mt-6 hidden">
+            <h3 class="font-bold text-gray-700 border-b pb-2 mb-3">Audit Results:</h3>
+            
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-gray-600">HTTPS Secure:</span>
+                <span id="httpsStatus" class="font-bold">...</span>
+            </div>
+            
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-gray-600">Privacy Policy:</span>
+                <span id="privacyStatus" class="font-bold">...</span>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-gray-600">Cookie Notice:</span>
+                <span id="cookieStatus" class="font-bold">...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Scans DB</h2>
+        <div id="historyList" class="space-y-3">
+            <p class="text-gray-500 text-sm text-center">Loading history...</p>
+        </div>
+    </div>
+
+    <script>
+        // NEW: Function to grab the database history from Python
+        async function loadHistory() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/history');
+                const data = await response.json();
+                const historyBox = document.getElementById('historyList');
+                
+                historyBox.innerHTML = ''; // Clear loading text
+                
+                data.history.forEach(scan => {
+                    // Create a clean visual badge based on whether HTTPS passed
+                    const badgeClass = scan.passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+                    const badgeText = scan.passed ? 'Secure' : 'Warning';
+                    
+                    historyBox.innerHTML += `
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                            <div>
+                                <p class="font-bold text-sm text-gray-800">${scan.url}</p>
+                                <p class="text-xs text-gray-500">${scan.date}</p>
+                            </div>
+                            <span class="text-xs font-bold px-2 py-1 rounded-full ${badgeClass}">${badgeText}</span>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                document.getElementById('historyList').innerHTML = '<p class="text-red-500 text-sm">Could not load DB.</p>';
+            }
+        }
+
+        // Run the history loader as soon as the page opens
+        window.onload = loadHistory;
+
+        // The Scanner logic
+        async function startScan() {
+            const targetUrl = document.getElementById('urlInput').value;
+            const resultsBox = document.getElementById('resultsBox');
+            
+            resultsBox.classList.remove('hidden');
+            document.getElementById('httpsStatus').innerText = "Scanning...";
+            document.getElementById('privacyStatus').innerText = "Scanning...";
+            document.getElementById('cookieStatus').innerText = "Scanning...";
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/audit?url=${targetUrl}`);
+                const data = await response.json();
+
+                document.getElementById('httpsStatus').innerText = data.is_secure_https ? "✅ Passed" : "❌ Failed";
+                document.getElementById('privacyStatus').innerText = data.found_privacy_policy ? "✅ Found" : "❌ Missing";
+                document.getElementById('cookieStatus').innerText = data.found_cookie_notice ? "✅ Found" : "❌ Missing";
+                
+                // NEW: Refresh the database history list after a new scan finishes!
+                loadHistory();
+                
+            } catch (error) {
+                alert("Error connecting to the scanner engine.");
+            }
+        }
+    </script>
+</body>
+</html>
