@@ -3,108 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DataGuard Auditor</title>
+    <title>DataGuard Auditor | Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print { .no-print { display: none; } }
+    </style>
 </head>
-<body class="bg-gray-50 flex flex-col items-center py-12 min-h-screen">
+<body class="bg-slate-50 flex flex-col items-center py-12 min-h-screen font-sans">
 
-    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md mb-8">
-        <h1 class="text-2xl font-bold text-gray-800 mb-2">DataGuard Auditor</h1>
-        <p class="text-gray-500 mb-6 text-sm">Automated GDPR Compliance Scanner</p>
-
-        <input type="text" id="urlInput" placeholder="e.g., apple.com" 
-            class="w-full border border-gray-300 rounded-lg p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        
-        <button onclick="startScan()" 
-            class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">
-            Scan Website
-        </button>
-
-        <div id="resultsBox" class="mt-6 hidden">
-            <h3 class="font-bold text-gray-700 border-b pb-2 mb-3">Audit Results:</h3>
-            
-            <div class="flex justify-between items-center mb-2">
-                <span class="text-gray-600">HTTPS Secure:</span>
-                <span id="httpsStatus" class="font-bold">...</span>
+    <!-- MAIN SCANNER CARD -->
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-xl mb-8 border border-slate-100">
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight">DataGuard Auditor</h1>
+                <p class="text-slate-500 text-sm">Enterprise GDPR Compliance Intelligence</p>
             </div>
-            
-            <div class="flex justify-between items-center mb-2">
-                <span class="text-gray-600">Privacy Policy:</span>
-                <span id="privacyStatus" class="font-bold">...</span>
+            <button onclick="window.print()" class="no-print bg-slate-100 text-slate-600 px-3 py-2 rounded-lg hover:bg-slate-200 transition text-xs font-bold">
+                🖨️ PRINT REPORT
+            </button>
+        </div>
+
+        <div class="flex gap-2 mb-8 no-print">
+            <input type="text" id="urlInput" placeholder="Enter URL (e.g. apple.com)" 
+                class="flex-1 border border-slate-200 rounded-xl p-4 focus:outline-none focus:ring-4 focus:ring-blue-100 transition">
+            <button onclick="startScan()" 
+                class="bg-blue-600 text-white font-bold px-6 rounded-xl hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-200 transition-all active:scale-95">
+                Audit Now
+            </button>
+        </div>
+
+        <!-- VISUAL SCORE GAUGE -->
+        <div id="resultsBox" class="hidden">
+            <div class="flex flex-col items-center mb-10 p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                <div class="relative w-40 h-40 flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90">
+                        <circle cx="80" cy="80" r="70" stroke="currentColor" stroke-width="12" fill="transparent" class="text-slate-200" />
+                        <circle id="scoreCircle" cx="80" cy="80" r="70" stroke="currentColor" stroke-width="12" fill="transparent" 
+                            stroke-dasharray="439.8" stroke-dashoffset="439.8"
+                            class="text-blue-600 transition-all duration-1000 ease-out stroke-round" />
+                    </svg>
+                    <span id="scoreText" class="absolute text-4xl font-black text-slate-800">0%</span>
+                </div>
+                <p class="text-slate-500 font-bold uppercase tracking-widest text-xs mt-4">Compliance Rating</p>
             </div>
 
-            <div class="flex justify-between items-center">
-                <span class="text-gray-600">Cookie Notice:</span>
-                <span id="cookieStatus" class="font-bold">...</span>
+            <div class="grid grid-cols-1 gap-4">
+                <div class="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
+                    <span class="text-slate-600 font-medium">SSL/HTTPS Protocol</span>
+                    <span id="httpsStatus" class="font-bold"></span>
+                </div>
+                <div class="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
+                    <span class="text-slate-600 font-medium">Legal Privacy Policy</span>
+                    <span id="privacyStatus" class="font-bold"></span>
+                </div>
+                <div class="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
+                    <span class="text-slate-600 font-medium">Cookie Consent Framework</span>
+                    <span id="cookieStatus" class="font-bold"></span>
+                </div>
+                <div class="flex justify-between items-center p-4 bg-white border border-slate-100 rounded-xl shadow-sm">
+                    <span class="text-slate-600 font-medium">Security Header Depth</span>
+                    <span id="headerCount" class="font-bold text-blue-600"></span>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Scans DB</h2>
+    <!-- HISTORY LOG -->
+    <div class="w-full max-w-xl no-print">
+        <h2 class="text-lg font-bold text-slate-700 mb-4 px-2">Historical Audit Logs</h2>
         <div id="historyList" class="space-y-3">
-            <p class="text-gray-500 text-sm text-center">Loading history...</p>
+            <p class="text-slate-400 text-sm text-center py-10 italic">Initializing database connection...</p>
         </div>
     </div>
 
     <script>
-        // NEW: Function to grab the database history from Python
         async function loadHistory() {
             try {
                 const response = await fetch('http://127.0.0.1:8000/history');
                 const data = await response.json();
                 const historyBox = document.getElementById('historyList');
-                
-                historyBox.innerHTML = ''; // Clear loading text
+                historyBox.innerHTML = ''; 
                 
                 data.history.forEach(scan => {
-                    // Create a clean visual badge based on whether HTTPS passed
-                    const badgeClass = scan.passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
-                    const badgeText = scan.passed ? 'Secure' : 'Warning';
-                    
+                    const scoreColor = scan.score >= 80 ? 'text-green-600' : (scan.score >= 50 ? 'text-yellow-600' : 'text-red-600');
                     historyBox.innerHTML += `
-                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                        <div class="flex justify-between items-center p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:border-blue-200 transition">
                             <div>
-                                <p class="font-bold text-sm text-gray-800">${scan.url}</p>
-                                <p class="text-xs text-gray-500">${scan.date}</p>
+                                <p class="font-bold text-slate-800">${scan.url}</p>
+                                <p class="text-xs text-slate-400 font-medium uppercase tracking-tighter">${scan.date}</p>
                             </div>
-                            <span class="text-xs font-bold px-2 py-1 rounded-full ${badgeClass}">${badgeText}</span>
+                            <div class="text-right">
+                                <p class="text-xl font-black ${scoreColor}">${scan.score}%</p>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase">SCORE</p>
+                            </div>
                         </div>
                     `;
                 });
             } catch (error) {
-                document.getElementById('historyList').innerHTML = '<p class="text-red-500 text-sm">Could not load DB.</p>';
+                console.error("History fetch failed");
             }
         }
 
-        // Run the history loader as soon as the page opens
-        window.onload = loadHistory;
-
-        // The Scanner logic
         async function startScan() {
             const targetUrl = document.getElementById('urlInput').value;
-            const resultsBox = document.getElementById('resultsBox');
+            if(!targetUrl) return alert("Please enter a URL");
             
+            const resultsBox = document.getElementById('resultsBox');
             resultsBox.classList.remove('hidden');
-            document.getElementById('httpsStatus').innerText = "Scanning...";
-            document.getElementById('privacyStatus').innerText = "Scanning...";
-            document.getElementById('cookieStatus').innerText = "Scanning...";
+            
+            // UI Reset
+            document.getElementById('scoreText').innerText = "---";
+            document.getElementById('scoreCircle').style.strokeDashoffset = 439.8;
 
             try {
                 const response = await fetch(`http://127.0.0.1:8000/audit?url=${targetUrl}`);
                 const data = await response.json();
 
-                document.getElementById('httpsStatus').innerText = data.is_secure_https ? "✅ Passed" : "❌ Failed";
-                document.getElementById('privacyStatus').innerText = data.found_privacy_policy ? "✅ Found" : "❌ Missing";
-                document.getElementById('cookieStatus').innerText = data.found_cookie_notice ? "✅ Found" : "❌ Missing";
+                // Animate Score Gauge
+                const score = data.compliance_score;
+                const circle = document.getElementById('scoreCircle');
+                const circumference = 439.8; 
+                const offset = circumference - (score / 100) * circumference;
+
+                setTimeout(() => {
+                    circle.style.strokeDashoffset = offset;
+                    document.getElementById('scoreText').innerText = `${score}%`;
+                    
+                    // Dynamic Coloring
+                    circle.setAttribute('class', `transition-all duration-1000 ease-out ${score >= 80 ? 'text-green-500' : (score >= 50 ? 'text-yellow-500' : 'text-red-500')}`);
+                }, 100);
+
+                // Update Status Row
+                document.getElementById('httpsStatus').innerHTML = data.is_secure_https ? '<span class="text-green-600">SECURE</span>' : '<span class="text-red-600">INSECURE</span>';
+                document.getElementById('privacyStatus').innerHTML = data.found_privacy_policy ? '<span class="text-green-600">FOUND</span>' : '<span class="text-red-600">MISSING</span>';
+                document.getElementById('cookieStatus').innerHTML = data.found_cookie_notice ? '<span class="text-green-600">FOUND</span>' : '<span class="text-red-600">MISSING</span>';
+                document.getElementById('headerCount').innerText = `${data.security_headers_count}/3 Detected`;
                 
-                // NEW: Refresh the database history list after a new scan finishes!
                 loadHistory();
-                
             } catch (error) {
-                alert("Error connecting to the scanner engine.");
+                alert("Critical engine failure. Check Python terminal.");
             }
         }
+
+        window.onload = loadHistory;
     </script>
 </body>
 </html>
