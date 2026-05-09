@@ -12,7 +12,7 @@ export default function App() {
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/history')
+      const res = await fetch('https://dataguard-api-c3bn.onrender.com/history')
       const data = await res.json()
       setHistory(data.history)
     } catch (err) { console.error("History offline") }
@@ -21,7 +21,7 @@ export default function App() {
   const runAudit = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`http://127.0.0.1:8000/audit?url=${url}`)
+      const res = await fetch(`https://dataguard-api-c3bn.onrender.com/audit?url=${url}`)
       const data = await res.json()
       setResult(data)
       fetchHistory()
