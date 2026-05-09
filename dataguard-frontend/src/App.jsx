@@ -7,7 +7,13 @@ export default function App() {
   const [history, setHistory] = useState([])
 
   useEffect(() => {
-    fetchHistory()
+    // 1. Fetch existing history logs
+    fetchHistory();
+    
+    // 2. Warming Request: Sends a ping to wake up the Render server immediately
+    fetch('https://dataguard-api-c3bn.onrender.com/')
+      .then(() => console.log("System Initializing..."))
+      .catch(() => console.log("System Booting..."));
   }, [])
 
   const fetchHistory = async () => {
@@ -33,11 +39,11 @@ export default function App() {
     <div className="min-h-screen bg-[#F9F9F9] text-zinc-900 font-sans p-6 md:p-12 selection:bg-zinc-900 selection:text-white">
       <div className="max-w-6xl mx-auto">
         
-        {/* Minimalist Header */}
+        {/* Header Section */}
         <header className="mb-16 pb-8 border-b border-zinc-200 flex justify-between items-end">
           <div>
             <h1 className="text-5xl font-medium tracking-tighter text-zinc-900">DataGuard.</h1>
-            <p className="text-zinc-500 text-sm tracking-wide mt-2">EU GDPR COMPLIANCE PROTOCOL</p>
+            <p className="text-zinc-500 text-sm tracking-wide mt-2 uppercase">EU GDPR Compliance Protocol</p>
           </div>
           <button onClick={() => window.print()} className="text-xs font-bold tracking-widest uppercase text-zinc-900 hover:text-zinc-500 transition-colors">
             [ Export ]
@@ -46,10 +52,9 @@ export default function App() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           
-          {/* Main Audit Area */}
-          <div className="lg:col-span-8 space-y-12">
+          {/* Main Action Area */}
+          <div className="lg:col-span-8 space-y-4">
             
-            {/* Input Section - Brutalist */}
             <div className="flex flex-col sm:flex-row gap-0 border border-zinc-900 bg-white shadow-[4px_4px_0px_0px_rgba(24,24,27,1)]">
               <input 
                 type="text" 
@@ -67,13 +72,19 @@ export default function App() {
               </button>
             </div>
 
+            {/* Minimalist Disclaimer */}
+            {!result && !loading && (
+              <p className="text-[9px] font-bold tracking-[0.2em] uppercase text-zinc-400 animate-pulse">
+                Note: Initial protocol sequence may require 30s to initialize cloud resources.
+              </p>
+            )}
+
             {/* Results Section */}
             {result && (
-              <div className="animate-in fade-in duration-700">
+              <div className="mt-12 animate-in fade-in duration-700">
                 <h2 className="text-xs font-bold tracking-widest uppercase text-zinc-400 mb-6">Audit Results</h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Stark Score Gauge */}
                   <div className="bg-white border border-zinc-200 p-8 flex flex-col items-center justify-center">
                     <div className="relative w-48 h-48">
                       <svg className="w-full h-full -rotate-90">
@@ -90,7 +101,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Clean List Data */}
                   <div className="flex flex-col justify-center space-y-0 border-t border-l border-r border-zinc-200 bg-white">
                     <StatusRow label="HTTPS Configuration" status={result.is_secure_https} />
                     <StatusRow label="Privacy Policy" status={result.found_privacy_policy} />
@@ -125,7 +135,7 @@ export default function App() {
 
         </div>
 
-        {/* System Colophon / Signature */}
+        {/* System Signature Footer */}
         <footer className="mt-24 pt-8 border-t border-zinc-200 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-bold tracking-widest uppercase text-zinc-400">
           <span>DataGuard EU © 2026 // System Operational</span>
           <span className="text-zinc-500">
